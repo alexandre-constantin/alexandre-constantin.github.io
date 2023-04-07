@@ -1,0 +1,140 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+STARTUP: overview, indent
+#+TAGS: noexport(n)
+
+#+TITLE: Singularity Guide
+#+Author: A. Constantin, J.-B. Durand, B.Kugler
+#+Date: September 2020
+#+OPTIONS:  H:3 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:  TeX:t LaTeX:t
+#+LANGUAGE: en
+
+* Installation tips
+
+    - On ubuntu, singularity is the name of a game and a package containing that game.
+    To install the singularity we are actually interested in (as root):
+        + sudo wget -O- http://neuro.debian.net/lists/xenial.us-ca.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
+        + sudo apt-key adv --recv-keys --keyserver hkp://pool.sks-keyservers.net:80 0xA5D32F012649A5A9
+        + apt update
+        + sudo apt-get install -y singularity-container (note that in some cases this last line is sufficient)
+    Sources:
+        + [[https://sylabs.io/guides/3.4/user-guide/installation.html]]
+    If you need a specific version of singularity, use instructions on
+    [[https://sylabs.io/guides/3.0/user-guide/installation.html#download-singularity-repo-and-optionally-check-out-a-tag-or-branch]]
+    (skip the "Download and install Singularity from a release" part) 
+        + To update singularity, first ensure to update go after deleting the previous installation (e.g., rm -Rf /usr/local/go/)
+
+* Singularity Image - Build an image
+
+An image is a singularity object which emulates an environment (OS,
+file system and packages).
+The environment is fixed (version number, ..).
+
+The image tutorial can be find on the Singularity website
+[[https://sylabs.io/guides/3.6/user-guide/build_a_container.html]]
+
+Or Docker Hub: [[https://hub.docker.com]]
+- /%post/: Built OS image. [[./Resources/tuto_Inria/docker-to-singularity.pdf#page=42][Slide 35]] Build inside a mounted folder to exchange with the image.
+- /%runscript/: Scripts, launched by default.
+
+
+The headline is the following
+1. Define a recipe.
+2. Compile the recipe *as root* using singularity.
+   #+BEGIN_SRC
+   sudo singularity build singularity_image.simg singularity_recipe
+   #+END_SRC
+
+** Packages
+
+The packages are installed as usual (Ubuntu) using /apt-get/.
+Two recipes examples are given for two languages:
+- [[./Examples/Singularity_recipes/singularity_recipe_python][Python]].
+- [[./Examples/Singularity_recipes/singularity_recipe_julia][Julia]].
+
+** File system
+
+One important feature of Singularity is that it creates an image with
+a *read-only* file system. After the build, no program can write on the
+disk : the image is frozen. 
+
+However, launching the imag with the --writable-tmpfs flag will allow you to modify the image in a temporary way.
+
+To still be able to read and write files, Singularity can [[https://sylabs.io/guides/3.6/user-guide/bind_paths_and_mounts.html][bind the container]] 
+to directories leaving outside (in the host file system).
+In the Inria cluster, the home directory and the cluster scratch are
+automatically mounted for you, so you shouldn't have to do it
+manually. 
+
+To read files, you thus have to options : include them in the image at
+build time or read them from a mounted directory (typically your home
+or the cluster scratch). 
+
+You probably want to install your programming language and your
+packages once for all, at build time. Having said that, if they are
+expected to regularly evolve, you should instead install them outside
+the image. Otherwise, you will have to build the image each time you
+update a package.
+
+On the other hand, you should place your data in a mounted folder:
+again, this is to avoid building the image every time your data
+change.
+
+
+* Use Singularity
+
+The main commands are presented on [[./Resources/tuto_Inria/docker-to-singularity.pdf#page=26][Slide 19]], we focus on the following
+
+- /run/: execute default script, /%runscript/, in the recipe then close the image.
+  #+BEGIN_SRC  
+  singularity run singularity_image.simg
+  #+END_SRC
+- /exec/: execute one script then close the image.
+  #+BEGIN_SRC  
+  singularity run singularity_image.simg script.sh
+  #+END_SRC
+- /shell/: interactive mode, open the image interactively.
+  #+BEGIN_SRC  
+  singularity shell singularity_image.simg
+
+  # Command lines
+
+  exit # Close the image
+  #+END_SRC
+
+* Resources
+
+- In /Examples/ some basic, but fonctional, examples are presented
+-  In /Advanced_examples/ you can find
+  + /Singularity_run/: Launch algorithm on the clusters using singularity
+    (this file does _not_compile_: otherwise each node will compile by its
+    side).
+  + /Singularity_compilation_-_OAR/: Send to OAR files and compile (this one is used to _compile_ only).
+  + /Singularity_compilation/: Compile in //scratch/ the Singularity recipe.
+  + /Cleaning_directories/: _Never call it locally_, will erase all folders
+    on cluster (scratch, etc).
+  + /MMST_HD/: Alexis's sample using or not OAR.
+
+* Misc.
+
++ Use 
+  #+BEGIN_SRC  
+  export TMPDIR=my_tmp_dir
+  #+END_SRC
+  to specify the directory for temporary files
++ To emulate adding instructions to the definition file:
+  #+BEGIN_SRC
+   sudo singularity shell -C --writable-tmpfs my_image #(nothing is actually changed)
+  #+END_SRC
++ Obviously you cannot run a container as root in the guest if you are
+  not root in the host. In that case:
+  #+BEGIN_SRC
+  sudo singularity shell  --keep-privs -C --writable-tmpfs my_image
+  #+END_SRC
++ To use graphical features within singularity, you should set the DISPLAY environment variable, e.g.
+  #+BEGIN_SRC
+  export DISPLAY=:0
+  #+END_SRC
+  (from guest)
+  If needed, update the list allowed to make connections to your X server with xhost (from host).

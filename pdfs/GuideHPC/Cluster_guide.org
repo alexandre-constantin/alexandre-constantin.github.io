@@ -1,0 +1,96 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+STARTUP: overview, indent
+#+TAGS: noexport(n)
+
+#+TITLE: Inria Clusters Guide
+#+Author: A. Constantin, B. Kugler
+#+Date: September 2020
+#+OPTIONS:  H:3 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:  TeX:t LaTeX:t
+#+LANGUAGE: en
+
+
+Some [[./Resources/TeamPresentation/Slides/Mistis_-_Formation_cluster_interne_v-2015_01_08.pdf][slides]] from former team members are available. 
+The additional resources are available in the directory /Resources/TeamPresentation/.
+
+* Architecture and Access
+
+The architecture is summarized in the Figure 1.
+
+#+CAPTION: Architecture and access to the cluster.
+#+ATTR_HTML: :align center
+[[./assets/graph_cluster.png]]
+
+
+The steps to access to the cluster are
+1. [[https://helpdesk.inria.fr/][Contact]] the "Support" and send your ssh public key (Soumettre une
+   demande -> Demande de service -> Reseaux et telecommunications ->
+   Accès SSH sur serveur sécurisé (then select "Acces direct SSH", .. and join the SSH public key.)).
+2. Use the following lines
+   #+BEGIN_SRC
+   # From outside
+   ssh <username>@bastion.inrialpes.fr
+   
+   # Then, or from Inria
+   ssh <username>@access1-cp.inrialpes.fr
+   #+END_SRC
+
+Then the computer is connected to a visu node and is able to see
+computing nodes and submit job requests using OAR.
+
+
+* Job scheduler OAR
+
+OAR is a job scheduler, it aims to organize the waiting queue.
+
+A complete tutorial is provided by Gricad ([[https://gricad-doc.univ-grenoble-alpes.fr/hpc/joblaunch/job_management/][link]]).
+
+** Useful commands
+
+- /oarsub/: Submit a job
+  #+BEGIN_SRC
+  # Connect to a nodes's shell (interactive job)
+  oarsub -I -l "{gpu='YES'}/nodes=1,walltime=06:00:00" -p "cluster='mistis'"
+
+  # Submit a job
+  oarsub -l "{gpu='NO'}/nodes=1,walltime=06:00:00" -p "cluster='mistis'" ./run_script.sh
+
+  # Submit a job with OAR directives included in the script
+  oarsub -S ./run_script_with_OAR_directives.sh
+  #+END_SRC
+  This command returns a job id that can be used in the next
+  commands.
+  The keywords are gpu, if the node has a GPU or not, then the number
+  of nodes (recommended to use an integer), then the walltime ask to
+  the scheduler a window to compute and finally the team name to focus
+  on some specific nodes.
+
+  An example of /run_script.sh/ is given [[./Examples/Cluster_script/run_script.sh][here]] and an example of
+  /run_script_with_OAR_directives/ is given  [[./Examples/Cluster_script/run_script_with_OAR_directives.sh][here]] (/Examples/Cluster_script/), the script file must be executable.
+- /oarstat/: check current state of nodes, they are some variant
+  #+BEGIN_SRC
+  oarstat # See all nodes state
+
+  oarstat -u <username> # See jobs submitted from user <username>
+
+  oarstat -j <jobid> # See state of job identified by its <jobid>
+  #+END_SRC
+- /oardel/: Delete/kill a job.
+  #+BEGIN_SRC
+  oardel <jobid>
+  #+END_SRC
+
+** Available nodes Access
+
+  The state of nodes can be seen from Inria's network using the links:
+  - a [[http://visu-cp.inrialpes.fr/drawgantt/][gantt chart]].
+  - a [[http://visu-cp.inrialpes.fr/monika][table]].
+
+* Clusters Directory
+
+  The directories //services/scratch/ and //home/<username>/ are available
+  in both nodes (visu and computing).
+  To use the clusters, the code *and* the Singularity image are copied in
+  one of these folder (//services/scratch/ is not a permanent directory
+  but is useful to keep data).
